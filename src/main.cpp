@@ -49,8 +49,7 @@ void loop() {
       if(on1==true){
         on1=false;
       }
-      else if(on1==false)
-      {
+      else if(on1==false){
         on1=true;
         on=false;
       }
@@ -62,11 +61,9 @@ void loop() {
     if(on2==true){
       on2=false;
     }
-    else
-    {
+    else{
       on2=true;
     }
-    
   }
   if (on==true){
     digitalWrite(LED, HIGH);
@@ -96,10 +93,5 @@ void loop() {
     digitalWrite(LED, LOW);
     digitalWrite(LED1, LOW);
   }
-
   delay(500);
-  
-
-
-  // put your main code here, to run repeatedly:
 }
