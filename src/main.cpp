@@ -1,97 +1,46 @@
+
 #include <Arduino.h>
-#define LED 13
-#define LED1 7
-#define BUTTON 12
-#define BUTTON1 10
-#define BUTTON2 5
-
-boolean on = false;
-boolean on1 = false;
-boolean on2 = false;
-int buttonState1 = 0;
-int buttonState = 0;
-int buttonState2 = 0;
-int state =0;
-void setup() {
-  Serial.begin(9600);
-  pinMode(LED,OUTPUT);
-  pinMode(BUTTON, INPUT);
-  pinMode(BUTTON1, INPUT);
-  pinMode(BUTTON2, INPUT);
-  pinMode(LED1, OUTPUT);
-  // put your setup code here, to run once:
+const int lP = 2;
+const int pP = 3;
+const int vP = 4;
+boolean pS = false;
+boolean lS = false;
+boolean vS = false;
+// inicializace proměnných, do kterých se uloží data
+void podminka(char s){
+  Serial.println(s);
+  if(s=='l'&&vS==false){
+    if(pS==true){
+      pS=false;
+    }
+    lS=true;
+  }
+  if(s=='p'&&vS==false){
+    if(lS==true){
+      lS=false;
+    }
+    pS=true;
+  }
+  return;
 }
-
-void loop() {
-  /*if(digitalRead(BUTTON)==1){
-    Serial.println(state);
-    state++;
-  }
-  delay(500);*/
-  buttonState = digitalRead(BUTTON);
-  buttonState1 = digitalRead(BUTTON1);
-  buttonState2 = digitalRead(BUTTON2);
-  if (buttonState == HIGH){
-    if(on2== false){
-      if(on==true){
-        on=false;
-      }
-      else if(on==false)
-      {
-        on=true;
-        on1=false;
-      }
-    }
-  }
-
-  if (buttonState1 == HIGH){
-    if(on2== false){
-      if(on1==true){
-        on1=false;
-      }
-      else if(on1==false){
-        on1=true;
-        on=false;
-      }
-    }
-  }
-  if (buttonState2 == HIGH){
-    on=false;
-    on1=false;
-    if(on2==true){
-      on2=false;
-    }
-    else{
-      on2=true;
-    }
-  }
-  if (on==true){
-    digitalWrite(LED, HIGH);
-    delay(500);
-    digitalWrite(LED, LOW);
-  }
-  if (on==false){
-    digitalWrite(LED, LOW);
-  }
-  
-  if (on1==true){
-    digitalWrite(LED1, HIGH);
-    delay(500);
-    digitalWrite(LED1, LOW);
-  }
-  if (on1==false){
-    digitalWrite(LED1, LOW);
-  }
-    if (on2==true){
-    digitalWrite(LED, HIGH);
-    digitalWrite(LED1, HIGH);
-    delay(500);
-    digitalWrite(LED1, LOW);
-    digitalWrite(LED, LOW);
-  }
-  if (on2==false){
-    digitalWrite(LED, LOW);
-    digitalWrite(LED1, LOW);
-  }
-  delay(500);
+void pressInterruptP(){
+  //Serial.println("Zmacknuto");
+  podminka('p');
+}
+void pressInterruptL(){
+  //Serial.println("Zmacknuto");
+  podminka('l');
+}
+void setup(){
+  Serial.begin(9600);
+  attachInterrupt(digitalPinToInterrupt(pP), pressInterruptP, RISING);
+  attachInterrupt(digitalPinToInterrupt(lP), pressInterruptL, RISING);
+  //attachInterrupt(digitalPinToInterrupt(pP), pressInterrupt, FALLING);
+}
+void loop(){
+  Serial.println("Prave tlacitko:");
+  Serial.println(pS);
+  Serial.println("Leve tlacitko:");
+  Serial.println(lS);
+  delay(5000);
 }
