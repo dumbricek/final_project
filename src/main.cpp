@@ -7,18 +7,17 @@ float AccX, GyroX, accAngleX, gyroAngleX;
 float roll, rollTmp, avRoll;
 float AccErrorX, GyroErrorX;
 float elapsedTime, currentTime, previousTime;
-int c = 0;
-float p[10];
 unsigned long startMillis;
 unsigned long currentMillis;
 const unsigned long period = 500;
 const int lP = 2;
 const int pP = 3;
-int i = 0;
 boolean pS = false;
 boolean lS = false;
-boolean vS = false;
-boolean state = false;
+boolean stateL = false;
+boolean stateL2 = false;
+boolean stateP = false;
+boolean stateP2 = false;
 
 void zhasni(){
   digitalWrite(LEDP, LOW);
@@ -27,19 +26,16 @@ void zhasni(){
 
 void podminka(char s){
   zhasni();
-  if(s=='l'&&vS==false){
+  if(s=='l'){
     pS=false;
     lS=!lS;
   }
-  if(s=='p'&&vS==false){
+  if(s=='p'){
     lS=false;
     pS=!pS;
   }
   return;
 }
-/*void rozsvit(int p){
-  digitalWrite(p, HIGH);
-}*/
 
 void pressInterruptP(){
   podminka('p');
@@ -61,23 +57,57 @@ void setup(){
   attachInterrupt(digitalPinToInterrupt(pP), pressInterruptP, RISING);
   attachInterrupt(digitalPinToInterrupt(lP), pressInterruptL, RISING);
   startMillis = millis();
-  //attachInterrupt(digitalPinToInterrupt(pP), pressInterrupt, FALLING);
 }
 void loop(){
+  roll = 0.96 * gyroAngleX + 0.04 * accAngleX;
   currentMillis = millis();  
   if (currentMillis - startMillis >= period) {
     if(pS){
       digitalWrite(LEDP, !digitalRead(LEDP));  //if so, change the state of the LED.  Uses a neat trick to change the state
+      if(roll > rollTmp + 1 && !stateP){
+        stateP2 = false;
+        stateP = true;
+      }
+      else if (roll < rollTmp -1 && stateP){
+        stateP2 = true;
+        stateP = false;
+      }
+      else if ((roll < rollTmp +0.1 && roll>rollTmp - 0.1)&&stateP2){
+        stateP2=false;
+        pS=false;
+        zhasni();
+        Serial.println("nakloněno doprava");
+      }
+      rollTmp = roll;
     }
     if(lS){
       digitalWrite(LEDL, !digitalRead(LEDL));  //if so, change the state of the LED.  Uses a neat trick to change the state
+      if(roll < rollTmp - 1 && !stateL){
+        stateL2 = false;
+        stateL = true;
+        Serial.println(roll);
+        Serial.println(rollTmp);
+      }
+      else if (roll > rollTmp +1 && stateL){
+        stateL2 = true;
+        stateL = false;
+        Serial.println(roll);
+        Serial.println(rollTmp);
+      }
+      else if ((roll < rollTmp +0.1 && roll>rollTmp - 0.1)&&stateL2){
+        stateL2=false;
+        lS=false;
+        zhasni();
+        Serial.println("nakloněno doleva");
+      }
+      rollTmp = roll;
     }
-    if(lS||pS){
-
+    else{
+      rollTmp = roll;
     }
+    
     startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED state.
-    roll = 0.96 * gyroAngleX + 0.04 * accAngleX;
-    Serial.println(rollTmp);
+
   }
   Wire.beginTransmission(MPU);
   Wire.write(0x3B); // Start with register 0x3B (ACCEL_XOUT_H)
@@ -86,7 +116,6 @@ void loop(){
   //For a range of +-2g, we need to divide the raw values by 16384, according to the datasheet
   AccX = (Wire.read() << 8 | Wire.read()) / 16384.0; // X-axis value
   // Calculating Roll from the accelerometer data
-  //accAngleX = (atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI); // AccErrorX ~(0) See the calculate_IMU_error()custom function for more details
   // === Read gyroscope data === //
   previousTime = currentTime;        // Previous time is stored before the actual time read
   currentTime = millis();            // Current time actual time read
@@ -100,7 +129,4 @@ void loop(){
   GyroX = GyroX+2.93 ; // GyroErrorX ~(-2.93)
   // Currently the raw values are in degrees per seconds, deg/s, so we need to multiply by sendonds (s) to get the angle in degrees
   gyroAngleX = gyroAngleX + GyroX * elapsedTime; // deg/s * s = deg
-  // Complementary filter - combine acceleromter and gyro angle values
-  roll = 0.96 * gyroAngleX + 0.04 * accAngleX;
-  // Print the values on the serial monitor
 }
