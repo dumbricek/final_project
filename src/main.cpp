@@ -46,24 +46,24 @@ void pressInterruptL(){
 }
 
 void setup(){
-  Wire.begin();                      // Initialize comunication
-  Wire.beginTransmission(MPU);       // Start communication with MPU6050 // MPU=0x68
-  Wire.write(0x6B);                  // Talk to the register 6B
-  Wire.write(0x00);                  // Make reset - place a 0 into the 6B register
-  Wire.endTransmission(true);        //end the transmission
-  pinMode(LEDP, OUTPUT);
+  Wire.begin();                      // Inicializace komunikace
+  Wire.beginTransmission(MPU);       // Start komunikace s čipem MPU-6050 // MPU=0x68
+  Wire.write(0x6B);                  // Komunikování s registrem 6B
+  Wire.write(0x00);                  // Udělá reset - vloží 0 do registru 6B
+  Wire.endTransmission(true);        // Ukončí přenos
+  pinMode(LEDP, OUTPUT);             // 
   pinMode(LEDL, OUTPUT);
   Serial.begin(9600);
-  attachInterrupt(digitalPinToInterrupt(pP), pressInterruptP, RISING);
-  attachInterrupt(digitalPinToInterrupt(lP), pressInterruptL, RISING);
-  startMillis = millis();
+  attachInterrupt(digitalPinToInterrupt(pP), pressInterruptP, RISING); // při zmáčknutí tlačítka se zapne funkce pressInterruptP
+  attachInterrupt(digitalPinToInterrupt(lP), pressInterruptL, RISING); 
+  startMillis = millis(); // 
 }
 void loop(){
   roll = 0.96 * gyroAngleX + 0.04 * accAngleX;
   currentMillis = millis();  
   if (currentMillis - startMillis >= period) {
     if(pS){
-      digitalWrite(LEDP, !digitalRead(LEDP));  //if so, change the state of the LED.  Uses a neat trick to change the state
+      digitalWrite(LEDP, !digitalRead(LEDP));  //změní stav pravé LE diody
       if(roll > rollTmp + 1 && !stateP){
         stateP2 = false;
         stateP = true;
@@ -76,7 +76,6 @@ void loop(){
         stateP2=false;
         pS=false;
         zhasni();
-        Serial.println("nakloněno doprava");
       }
       rollTmp = roll;
     }
@@ -85,29 +84,22 @@ void loop(){
       if(roll < rollTmp - 1 && !stateL){
         stateL2 = false;
         stateL = true;
-        Serial.println(roll);
-        Serial.println(rollTmp);
       }
       else if (roll > rollTmp +1 && stateL){
         stateL2 = true;
         stateL = false;
-        Serial.println(roll);
-        Serial.println(rollTmp);
       }
       else if ((roll < rollTmp +0.1 && roll>rollTmp - 0.1)&&stateL2){
         stateL2=false;
         lS=false;
         zhasni();
-        Serial.println("nakloněno doleva");
       }
       rollTmp = roll;
     }
     else{
       rollTmp = roll;
     }
-    
-    startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED state.
-
+    startMillis = currentMillis;  // uložení času změny LE diody
   }
   Wire.beginTransmission(MPU);
   Wire.write(0x3B); // Start with register 0x3B (ACCEL_XOUT_H)
@@ -119,14 +111,57 @@ void loop(){
   // === Read gyroscope data === //
   previousTime = currentTime;        // Previous time is stored before the actual time read
   currentTime = millis();            // Current time actual time read
-  elapsedTime = (currentTime - previousTime) / 1000; // Divide by 1000 to get seconds
+  elapsedTime = (currentTime - previousTime) / 1000; // Dělení tisícem na převod na sekundy
   Wire.beginTransmission(MPU);
   Wire.write(0x43); // Gyro data first register address 0x43
   Wire.endTransmission(false);
   Wire.requestFrom(MPU, 6, true); // Read 4 registers total, each axis value is stored in 2 registers
   GyroX = (Wire.read() << 8 | Wire.read()) / 131.0; // For a 250deg/s range we have to divide first the raw value by 131.0, according to the datasheet
-  // Correct the outputs with the calculated error values
   GyroX = GyroX+2.93 ; // GyroErrorX ~(-2.93)
-  // Currently the raw values are in degrees per seconds, deg/s, so we need to multiply by sendonds (s) to get the angle in degrees
+  // Teď jsou surové data uložený ve stupních za sekudnu, takže je potřebujem vynásobit sekundami, abychom dostali velikost úhlu
   gyroAngleX = gyroAngleX + GyroX * elapsedTime; // deg/s * s = deg
 }
+//funkce pro zjištění odchylky mezi jednotlivými měřeními
+/*void calculate_IMU_error() {
+  while (c < 200) {
+    Wire.beginTransmission(MPU);
+    Wire.write(0x3B);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU, 6, true);
+    AccX = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
+    AccY = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
+    AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
+    AccErrorX = AccErrorX + ((atan((AccY) / sqrt(pow((AccX), 2) + pow((AccZ), 2))) * 180 / PI));
+    AccErrorY = AccErrorY + ((atan(-1 * (AccX) / sqrt(pow((AccY), 2) + pow((AccZ), 2))) * 180 / PI));
+    c++;
+  }
+  AccErrorX = AccErrorX / 200;
+  AccErrorY = AccErrorY / 200;
+  c = 0;
+  while (c < 200) {
+    Wire.beginTransmission(MPU);
+    Wire.write(0x43);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU, 6, true);
+    GyroX = Wire.read() << 8 | Wire.read();
+    GyroY = Wire.read() << 8 | Wire.read();
+    GyroZ = Wire.read() << 8 | Wire.read();
+    GyroErrorX = GyroErrorX + (GyroX / 131.0);
+    GyroErrorY = GyroErrorY + (GyroY / 131.0);
+    GyroErrorZ = GyroErrorZ + (GyroZ / 131.0);
+    c++;
+  }
+  GyroErrorX = GyroErrorX / 200;
+  GyroErrorY = GyroErrorY / 200;
+  GyroErrorZ = GyroErrorZ / 200;
+  Serial.print("AccErrorX: ");
+  Serial.println(AccErrorX);
+  Serial.print("AccErrorY: ");
+  Serial.println(AccErrorY);
+  Serial.print("GyroErrorX: ");
+  Serial.println(GyroErrorX);
+  Serial.print("GyroErrorY: ");
+  Serial.println(GyroErrorY);
+  Serial.print("GyroErrorZ: ");
+  Serial.println(GyroErrorZ);
+}*/
