@@ -51,12 +51,12 @@ void setup(){
   Wire.write(0x6B);                  // Komunikování s registrem 6B
   Wire.write(0x00);                  // Udělá reset - vloží 0 do registru 6B
   Wire.endTransmission(true);        // Ukončí přenos
-  pinMode(LEDP, OUTPUT);             // 
+  pinMode(LEDP, OUTPUT);
   pinMode(LEDL, OUTPUT);
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(pP), pressInterruptP, RISING); // při zmáčknutí tlačítka se zapne funkce pressInterruptP
   attachInterrupt(digitalPinToInterrupt(lP), pressInterruptL, RISING); 
-  startMillis = millis(); // 
+  startMillis = millis();
 }
 void loop(){
   roll = 0.96 * gyroAngleX + 0.04 * accAngleX;
@@ -80,7 +80,7 @@ void loop(){
       rollTmp = roll;
     }
     if(lS){
-      digitalWrite(LEDL, !digitalRead(LEDL));  //if so, change the state of the LED.  Uses a neat trick to change the state
+      digitalWrite(LEDL, !digitalRead(LEDL));  //změní stav levé LE diody
       if(roll < rollTmp - 1 && !stateL){
         stateL2 = false;
         stateL = true;
@@ -102,28 +102,28 @@ void loop(){
     startMillis = currentMillis;  // uložení času změny LE diody
   }
   Wire.beginTransmission(MPU);
-  Wire.write(0x3B); // Start with register 0x3B (ACCEL_XOUT_H)
+  Wire.write(0x3B);
   Wire.endTransmission(false);
-  Wire.requestFrom(MPU, 6, true); // Read 6 registers total, each axis value is stored in 2 registers
-  //For a range of +-2g, we need to divide the raw values by 16384, according to the datasheet
-  AccX = (Wire.read() << 8 | Wire.read()) / 16384.0; // X-axis value
+  Wire.requestFrom(MPU, 6, true); // přečte celkem šest registrů, každá hodnota osy je uložená ve dvou registrech
+  //pro rozsah +-2g podle datasheetu potřebujeme surové data vydělit 16384
+  AccX = (Wire.read() << 8 | Wire.read()) / 16384.0; // hodnota osy X
   // Calculating Roll from the accelerometer data
   // === Read gyroscope data === //
-  previousTime = currentTime;        // Previous time is stored before the actual time read
-  currentTime = millis();            // Current time actual time read
+  previousTime = currentTime;        // Předchozí čas 
+  currentTime = millis();            // Stávající čas
   elapsedTime = (currentTime - previousTime) / 1000; // Dělení tisícem na převod na sekundy
   Wire.beginTransmission(MPU);
-  Wire.write(0x43); // Gyro data first register address 0x43
+  Wire.write(0x43);
   Wire.endTransmission(false);
-  Wire.requestFrom(MPU, 6, true); // Read 4 registers total, each axis value is stored in 2 registers
+  Wire.requestFrom(MPU, 6, true); // Přečte 4 registry, každá osa jsou uloženy ve 2 registrech
   GyroX = (Wire.read() << 8 | Wire.read()) / 131.0; // For a 250deg/s range we have to divide first the raw value by 131.0, according to the datasheet
   GyroX = GyroX+2.93 ; // GyroErrorX ~(-2.93)
   // Teď jsou surové data uložený ve stupních za sekudnu, takže je potřebujem vynásobit sekundami, abychom dostali velikost úhlu
-  gyroAngleX = gyroAngleX + GyroX * elapsedTime; // deg/s * s = deg
+  gyroAngleX = gyroAngleX + GyroX * elapsedTime; // stupně/s * s = stupně
 }
 //funkce pro zjištění odchylky mezi jednotlivými měřeními
 /*void calculate_IMU_error() {
-  while (c < 200) {
+  while (c < 1000) {
     Wire.beginTransmission(MPU);
     Wire.write(0x3B);
     Wire.endTransmission(false);
@@ -135,10 +135,10 @@ void loop(){
     AccErrorY = AccErrorY + ((atan(-1 * (AccX) / sqrt(pow((AccY), 2) + pow((AccZ), 2))) * 180 / PI));
     c++;
   }
-  AccErrorX = AccErrorX / 200;
-  AccErrorY = AccErrorY / 200;
+  AccErrorX = AccErrorX / 1000;
+  AccErrorY = AccErrorY / 1000;
   c = 0;
-  while (c < 200) {
+  while (c < 1000) {
     Wire.beginTransmission(MPU);
     Wire.write(0x43);
     Wire.endTransmission(false);
@@ -151,9 +151,9 @@ void loop(){
     GyroErrorZ = GyroErrorZ + (GyroZ / 131.0);
     c++;
   }
-  GyroErrorX = GyroErrorX / 200;
-  GyroErrorY = GyroErrorY / 200;
-  GyroErrorZ = GyroErrorZ / 200;
+  GyroErrorX = GyroErrorX / 1000;
+  GyroErrorY = GyroErrorY / 1000;
+  GyroErrorZ = GyroErrorZ / 1000;
   Serial.print("AccErrorX: ");
   Serial.println(AccErrorX);
   Serial.print("AccErrorY: ");
